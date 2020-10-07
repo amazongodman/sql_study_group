@@ -8,7 +8,7 @@ Use for non-profit purposes, but delete if there is a problem.
 # What do we do?
 
 - use [DB Browser for SQLite](https://sqlitebrowser.org/) and make query on it.
-- use [data]() and data Entity Relationship Diagram(See the figure below)
+- use data(100knocks.db) and data Entity Relationship Diagram(See the figure below)
 
 ![100knocks_ER](https://user-images.githubusercontent.com/52575713/95284975-9ef87180-089a-11eb-8890-8a161e4fb2c2.png)
 
