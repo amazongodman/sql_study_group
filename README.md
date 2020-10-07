@@ -2,7 +2,7 @@
 
 This page referred to [The-Japan-DataScientist-Society 100knocks-preprocess](https://github.com/The-Japan-DataScientist-Society/100knocks-preprocess)  
 
-**Use for non-profit purposes, but delete if there is a problem. 
+**Use for non-profit purposes, but delete if there is a problem.**
 
 
 You don't need to be able to use the docker environment or have no knowledge of python or R.  
