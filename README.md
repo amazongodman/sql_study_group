@@ -18,7 +18,7 @@ You don't have to be a data scientist to be trained in data extraction.
 
 > Write a query in the DB browser using the data and the problem.  
 Talk about the connection between the idea at the time of creation query.   
-Discussing in your mind when thinking about query, not winning or losing.
+Discussing in your mind when thinking about query, not winning or losing.  
 Let's go data-driven.  
 
 
