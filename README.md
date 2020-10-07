@@ -22,3 +22,8 @@ Let's go data-driven.
 
 
 > **Use for non-profit purposes, but delete if there is a problem.**
+
+> Tested environment
+First release candidate for 3.12.1
+windows 10 pro
+
