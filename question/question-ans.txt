@@ -1,0 +1,249 @@
+https://sqlitebrowser.org/blog/first-release-candidate-for-3-12-1/
+
+https://sqlitebrowser.org/
+をインストールする
+添付の「.db」をドラック&ドロップ(上書き防止のためコピーを使用すること推奨)
+execute sql　のタブに直接書き込む
+
+
+
+# 回答方法
+
+- sql文(クエリ)を必ず残すこと
+- 中間テーブルは何種類作っても構わない
+- コードレビューを行うため、コードや関数に対して説明コメントを残しておくこと
+- 余裕があれば、実行時間やlimit,headを外した時の行数も確認してコメントに残しておくこと
+- その他気づいた点を共有できると嬉しい
+
+
+- 解き終えた段階で提出
+- 全て解けなくてもOK
+
+
+注意
+DBbrowserにTRUNCは存在しない。CEILINGも。切り捨て時にはroundをっても良いこととする。(access扱い？？)
+
+CREATE TEMP TABLE
+CREATE TEMP TABLE as()　は使えない
+
+CREATE TABLE なまえ AS　の後に直接クエリを書き込む事。
+
+
+
+#########################
+#########################
+S-001: 
+レシート明細テーブル（receipt）から全項目を10件抽出し、
+どのようなデータを保有しているか目視で確認せよ。
+#########################
+#########################
+
+SELECT * FROM receipt LIMIT 10
+
+
+#########################
+#########################
+S-002: 
+レシート明細のテーブル（receipt）から売上日（sales_ymd）、顧客ID（customer_id）、
+商品コード（product_cd）、売上金額（amount）の順に列を指定し、10件表示させよ。
+#########################
+#########################
+
+SELECT sales_ymd, customer_id, product_cd, amount FROM receipt LIMIT 10
+
+
+#########################
+#########################
+S-004: 
+レシート明細のテーブル（receipt）から
+売上日（sales_ymd）、顧客ID（customer_id）、商品コード（product_cd）、売上金額（amount）
+の順に列を指定し、以下の条件を満たすデータを抽出せよ
+顧客ID（customer_id）が"CS018205000001"
+#########################
+#########################
+
+
+SELECT
+    sales_ymd as sales_date, customer_id, product_cd, amount
+FROM
+    receipt
+WHERE
+    customer_id = 'CS018205000001'
+
+#########################
+#########################
+S-009: 
+以下の処理において、出力結果を変えずにORをANDに書き換えよ。
+select * from store where not (prefecture_cd = '13' or floor_area > 900)
+#########################
+#########################
+
+
+SELECT * FROM store WHERE prefecture_cd != '13' and floor_area <= 900
+
+#########################
+#########################
+S-029: 
+レシート明細テーブル（receipt）に対し、店舗コード（store_cd）ごとに商品コードの最頻値を求めよ。
+#########################
+#########################
+
+WITH product_mode AS (
+    SELECT store_cd,product_cd, COUNT(1) as mode_cnt,
+        RANK() OVER(PARTITION BY store_cd ORDER BY COUNT(1) DESC) AS rnk
+    FROM receipt
+    GROUP BY store_cd,product_cd
+)
+SELECT store_cd,product_cd, mode_cnt
+FROM product_mode
+WHERE rnk = 1
+ORDER BY store_cd,product_cd;
+
+
+#########################
+#########################
+S-041: レシート明細テーブル（receipt）の売上金額（amount）を日付（sales_ymd）ごとに集計し、前日からの売上金額増減を計算せよ。なお、計算結果は10件表示すればよい。
+#########################
+#########################
+
+WITH sales_amount_by_date AS (
+    SELECT sales_ymd, SUM(amount) as amount FROM receipt
+    GROUP BY sales_ymd
+    ORDER BY sales_ymd
+)
+SELECT sales_ymd, LAG(sales_ymd, 1) OVER(ORDER BY sales_ymd) lag_ymd,
+    amount,
+    LAG(amount, 1) OVER(ORDER BY sales_ymd) as lag_amount,
+    amount - LAG(amount, 1) OVER(ORDER BY sales_ymd) as diff_amount
+FROM sales_amount_by_date
+LIMIT 10;
+
+
+#########################
+#########################
+S-043: 
+レシート明細テーブル（receipt）と顧客テーブル（customer）を結合し、性別（gender）と年代（ageから計算）ごとに売上金額（amount）
+を合計した売上サマリテーブル（sales_summary）を作成せよ。性別は0が男性、1が女性、9が不明を表すものとする。
+ただし、項目構成は年代、女性の売上金額、男性の売上金額、性別不明の売上金額の4項目とすること（縦に年代、横に性別のクロス集計）。
+また、年代は10歳ごとの階級とすること。
+#########################
+#########################
+
+
+
+DROP TABLE IF EXISTS sales_summary;
+
+CREATE TABLE sales_summary AS
+    WITH gender_era_amount AS (
+        SELECT c.gender_cd,
+        TRUNC(age/ 10) * 10 AS era,
+        SUM(r.amount) AS amount
+        FROM customer c
+        JOIN receipt r
+        ON c.customer_id = r.customer_id
+        GROUP BY c.gender_cd, era
+    )
+    select era,
+        MAX(CASE gender_cd WHEN '0' THEN amount ELSE 0 END) AS male ,
+        MAX(CASE gender_cd WHEN '1' THEN amount ELSE 0 END) AS female,
+        MAX(CASE gender_cd WHEN '9' THEN amount ELSE 0 END) AS unknown
+    FROM gender_era_amount
+    GROUP BY era
+    ORDER BY era
+;
+
+
+
+SELECT * FROM sales_summary;
+
+
+
+
+
+
+#########################
+#########################
+S-089: 
+売上実績のある顧客に対し、機械学習による予測モデル構築のため学習用データとテスト用データに分割したい。
+8:2の割合でランダムにデータを分割し、テーブルを作成せよ。
+-- 乱数表を固定する必要はないとする。
+#########################
+#########################
+
+
+
+
+
+
+CREATE TEMP TABLE IF NOT EXISTS sales_record_customer_id AS
+    SELECT customer_id ,ROW_NUMBER()OVER(ORDER BY RANDOM()) AS row
+    FROM customer
+    LEFT JOIN receipt USING(customer_id)
+    GROUP BY customer_id
+    HAVING SUM(amount) IS NOT NULL 
+;
+
+DROP TABLE IF EXISTS customer_train;
+
+
+CREATE TABLE customer_train AS
+SELECT customer.*
+FROM sales_record_customer_id
+LEFT JOIN customer USING(customer_id)
+WHERE sales_record_customer_id.row < (SELECT COUNT(0) FROM sales_record_customer_id) *0.8
+;
+
+DROP TABLE IF EXISTS customer_test;
+
+CREATE TABLE customer_test AS
+SELECT customer.* FROM sales_record_customer_id LEFT JOIN customer USING(customer_id)
+EXCEPT
+SELECT * from customer_train
+;
+
+
+
+
+#########################
+#########################
+S-092: 
+顧客テーブル（customer）では、性別に関する情報が非正規化の状態で保持されている。
+これを第三正規化せよ
+#########################
+#########################
+
+
+DROP TABLE IF EXISTS customer_std;
+
+CREATE TABLE customer_std AS 
+    SELECT
+        customer_id,
+        customer_name,
+        gender_cd,
+        birth_day,
+        age,
+        postal_cd,
+        application_store_cd,
+        application_date,
+        status_cd
+    FROM
+        customer
+;
+
+DROP TABLE IF EXISTS gender_std;
+
+CREATE TABLE gender_std AS 
+    SELECT distinct
+        gender_cd, gender
+    FROM
+        customer
+
+
+
+SELECT * FROM gender_std
+
+
+#########################
+#########################
+
+
